@@ -53,3 +53,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+datasets/raw/
+
+data/
