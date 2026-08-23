@@ -56,3 +56,8 @@ build/
 datasets/raw/
 
 data/
+
+.venv/
+node_modules/
+.env
+__pycache__/
