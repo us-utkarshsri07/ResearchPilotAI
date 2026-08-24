@@ -9,6 +9,7 @@ from backend.rag.ingestion.schemas import Chunk
 
 
 class VectorStore:
+
     def __init__(
         self,
         collection_name: str = "researchpilot_chunks",
@@ -20,22 +21,18 @@ class VectorStore:
             path="data/qdrant"
         )
 
-        self._create_collection(vector_size)
+        self._create_collection(
+            vector_size=vector_size
+        )
 
     def _create_collection(
         self,
         vector_size: int,
     ) -> None:
 
-        collections = self.client.get_collections()
-
-        collection_names = [
-            collection.name
-            for collection in collections.collections
-        ]
-
-        if self.collection_name not in collection_names:
-
+        if not self.client.collection_exists(
+            self.collection_name
+        ):
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
@@ -43,6 +40,23 @@ class VectorStore:
                     distance=Distance.COSINE,
                 ),
             )
+
+    def clear_collection(self) -> None:
+
+        if self.client.collection_exists(
+            self.collection_name
+        ):
+            self.client.delete_collection(
+                collection_name=self.collection_name
+            )
+
+        self.client.create_collection(
+            collection_name=self.collection_name,
+            vectors_config=VectorParams(
+                size=384,
+                distance=Distance.COSINE,
+            ),
+        )
 
     def add_chunks(
         self,
@@ -63,27 +77,20 @@ class VectorStore:
                     "content": chunk.content,
                     "source": chunk.metadata.source,
                     "filename": chunk.metadata.filename,
-                    "page_number": (
-                        chunk.metadata.page_number
-                    ),
-                    "document_id": (
-                        chunk.metadata.document_id
-                    ),
-                    "chunk_id": (
-                        chunk.metadata.chunk_id
-                    ),
-                    "chunk_index": (
-                        chunk.metadata.chunk_index
-                    ),
+                    "page_number": chunk.metadata.page_number,
+                    "document_id": chunk.metadata.document_id,
+                    "chunk_id": chunk.metadata.chunk_id,
+                    "chunk_index": chunk.metadata.chunk_index,
                 },
             )
 
             points.append(point)
 
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=points,
-        )
+        if points:
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=points,
+            )
 
     def search(
         self,
@@ -113,6 +120,7 @@ class VectorStore:
         chunks = []
 
         for result in results:
+
             payload = result.payload
 
             chunk = Chunk(
@@ -135,4 +143,3 @@ class VectorStore:
             )
 
         return chunks
-

@@ -9,8 +9,11 @@ RAW_DATA_DIR = DATASET_DIR / "raw"
 
 
 # Retrieval configuration
-RETRIEVAL_TOP_K = 10
+RETRIEVAL_TOP_K = 5
+MIN_RETRIEVAL_TOP_K = 3
 FINAL_TOP_K = 5
+HYBRID_TOP_K = 10
+MIN_RELEVANCE_SCORE = 0.0
 
 
 # Chunking configuration
@@ -23,8 +26,4 @@ EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
-LLM_MODEL = "qwen3:4b"
-
-
-# Ollama configuration
-OLLAMA_BASE_URL = "http://localhost:11434"
+GEMINI_MODEL = "gemini-3.6-flash"

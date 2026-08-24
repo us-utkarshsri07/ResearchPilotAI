@@ -4,6 +4,7 @@ from backend.core.config import EMBEDDING_MODEL
 
 
 class EmbeddingModel:
+
     def __init__(
         self,
         model_name: str = EMBEDDING_MODEL,

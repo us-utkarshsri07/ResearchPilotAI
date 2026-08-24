@@ -1,4 +1,4 @@
-from backend.llm.ollama_client import OllamaClient
+from backend.llm.gemini_client import OllamaClient
 from backend.rag.embeddings.embedding_model import EmbeddingModel
 from backend.rag.reranking.cross_encoder import CrossEncoderReranker
 from backend.rag.retrieval.bm25_search import BM25Search

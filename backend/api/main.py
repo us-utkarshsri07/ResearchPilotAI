@@ -1,10 +1,18 @@
-from fastapi import FastAPI
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.schemas import (
     AnswerResponse,
     QuestionRequest,
     SourceResponse,
+)
+
+from backend.core.config import (
+    CHUNK_OVERLAP,
+    CHUNK_SIZE,
 )
 
 from backend.rag.chunking.text_chunker import TextChunker
@@ -15,11 +23,10 @@ from backend.rag.pipeline import RAGPipeline
 app = FastAPI(
     title="ResearchPilot AI",
     description="AI-powered research assistant",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 
-# CORS MUST be added before routes
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -32,44 +39,123 @@ app.add_middleware(
 )
 
 
-# Initialize pipeline
-try:
-    loader = PDFLoader()
+UPLOAD_DIR = Path("datasets/uploads")
 
-    documents = loader.load(
-        "datasets/raw/sample_paper.pdf"
-    )
+UPLOAD_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
-    chunker = TextChunker(
-        chunk_size=1000,
-        chunk_overlap=200,
-    )
 
-    chunks = chunker.chunk_documents(
-        documents
-    )
-
-    pipeline = RAGPipeline(
-        chunks=chunks
-    )
-
-    print(">>> RAG Pipeline Ready <<<")
-
-except Exception as e:
-    pipeline = None
-
-    print(
-        f"Pipeline initialization failed: {e}"
-    )
+pipeline = None
 
 
 @app.get("/health")
 def health_check():
-
     return {
         "status": "healthy",
         "service": "researchpilot",
     }
+
+
+@app.post("/upload")
+async def upload_pdf(
+    file: UploadFile = File(...),
+):
+    global pipeline
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="No file was provided.",
+        )
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are supported.",
+        )
+
+    unique_filename = (
+        f"{uuid4()}_{file.filename}"
+    )
+
+    file_path = (
+        UPLOAD_DIR / unique_filename
+    )
+
+    try:
+        # Save uploaded PDF
+        content = await file.read()
+
+        with open(
+            file_path,
+            "wb",
+        ) as buffer:
+            buffer.write(content)
+
+        # Load PDF
+        loader = PDFLoader()
+
+        documents = loader.load(
+            str(file_path)
+        )
+
+        if not documents:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "No readable text was found "
+                    "in the PDF."
+                ),
+            )
+
+        # Chunk PDF
+        chunker = TextChunker(
+            chunk_size=CHUNK_SIZE,
+            chunk_overlap=CHUNK_OVERLAP,
+        )
+
+        chunks = chunker.chunk_documents(
+            documents
+        )
+
+        if not chunks:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "No chunks could be created "
+                    "from the PDF."
+                ),
+            )
+
+        # Create and index RAG pipeline
+        pipeline = RAGPipeline(
+            chunks=chunks
+        )
+
+        return {
+            "message": (
+                "PDF uploaded and processed "
+                "successfully."
+            ),
+            "filename": file.filename,
+            "pages": len(documents),
+            "chunks": len(chunks),
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print(
+            f"Upload failed: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
 
 
 @app.post(
@@ -77,19 +163,26 @@ def health_check():
     response_model=AnswerResponse,
 )
 def ask_question(
-    request: QuestionRequest
+    request: QuestionRequest,
 ):
-
     if pipeline is None:
-        return {
-            "answer": "RAG pipeline is not initialized.",
-            "sources": [],
-        }
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "No PDF has been uploaded yet."
+            ),
+        )
+
+    if not request.question.strip():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Question cannot be empty."
+            ),
+        )
 
     result = pipeline.answer(
         query=request.question,
-        retrieval_k=10,
-        final_k=5,
     )
 
     sources = [

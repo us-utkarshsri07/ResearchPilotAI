@@ -1,11 +1,15 @@
 from sentence_transformers import CrossEncoder
-
 from backend.rag.ingestion.schemas import Chunk
+from backend.core.config import (
+    MIN_RELEVANCE_SCORE,
+    RERANKER_MODEL,
+)
 
-from backend.core.config import RERANKER_MODEL
+
 
 
 class CrossEncoderReranker:
+
     def __init__(
         self,
         model_name: str = RERANKER_MODEL,
@@ -33,35 +37,58 @@ class CrossEncoderReranker:
             )
 
             if key not in unique_candidates:
-                unique_candidates[key] = (chunk, score)
+                unique_candidates[key] = (
+                    chunk,
+                    score,
+                )
 
-        # Convert dictionary values back to a list
-        candidates = list(unique_candidates.values())
+        candidates = list(
+            unique_candidates.values()
+        )
+
+        # Handle empty candidates
+        if not candidates:
+            return []
 
         # Create query-document pairs
         pairs = [
-            (query, chunk.content)
+            (
+                query,
+                chunk.content,
+            )
             for chunk, _ in candidates
         ]
 
         # Get relevance scores
-        scores = self.model.predict(pairs)
+        scores = self.model.predict(
+            pairs
+        )
 
-        # Combine chunks with their scores and sort
+        # Combine chunks with scores
         ranked_results = sorted(
             zip(
-                [chunk for chunk, _ in candidates],
+                [
+                    chunk
+                    for chunk, _ in candidates
+                ],
                 scores,
             ),
-            key=lambda item: item[1],
+            key=lambda item: float(
+                item[1]
+            ),
             reverse=True,
         )
 
-        # Return only the top results
-        return [
+        # Remove weak or irrelevant results
+        filtered_results = [
             (
                 chunk,
                 float(score),
             )
-            for chunk, score in ranked_results[:top_k]
+            for chunk, score in ranked_results
+            if float(score)
+            >= MIN_RELEVANCE_SCORE
         ]
+
+        # Return the best relevant results
+        return filtered_results[:top_k]

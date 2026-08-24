@@ -1,42 +1,99 @@
-print(">>> Loading NEW Pipeline <<<")
+print(">>> Loading RAG Pipeline <<<")
 
 from backend.core.config import (
     FINAL_TOP_K,
     RETRIEVAL_TOP_K,
+    HYBRID_TOP_K,
 )
 
-from backend.llm.ollama_client import OllamaClient
+from backend.llm.gemini_client import GeminiClient
 
-from backend.rag.embeddings.embedding_model import EmbeddingModel
+from backend.rag.embeddings.embedding_model import (
+    EmbeddingModel,
+)
 
-from backend.rag.reranking.cross_encoder import CrossEncoderReranker
+from backend.rag.reranking.cross_encoder import (
+    CrossEncoderReranker,
+)
 
-from backend.rag.retrieval.bm25_search import BM25Search
+from backend.rag.retrieval.bm25_search import (
+    BM25Search,
+)
 
-from backend.rag.retrieval.hybrid_search import HybridSearch
+from backend.rag.retrieval.hybrid_search import (
+    HybridSearch,
+)
 
-from backend.rag.retrieval.vector_store import VectorStore
+from backend.rag.retrieval.vector_store import (
+    VectorStore,
+)
 
 
 class RAGPipeline:
 
     def __init__(self, chunks):
 
+        if not chunks:
+            raise ValueError(
+                "Cannot create a RAG pipeline without chunks."
+            )
+
         self.chunks = chunks
 
+        # Initialize embedding model
         self.embedding_model = EmbeddingModel()
 
+        # Initialize vector store
         self.vector_store = VectorStore()
 
+        # Initialize BM25
         self.bm25_search = BM25Search(
             chunks=self.chunks
         )
 
+        # Initialize hybrid search
         self.hybrid_search = HybridSearch()
 
+        # Initialize reranker
         self.reranker = CrossEncoderReranker()
 
-        self.llm = OllamaClient()
+        # Initialize Gemini client
+        self.llm = GeminiClient()
+
+        # Create embeddings and store chunks
+        self._index_chunks()
+
+
+    def _index_chunks(self):
+
+        print(
+            f">>> Creating embeddings for "
+            f"{len(self.chunks)} chunks <<<"
+        )
+
+        texts = [
+            chunk.content
+            for chunk in self.chunks
+        ]
+
+        embeddings = (
+            self.embedding_model.embed_documents(
+                texts
+            )
+        )
+
+        print(
+            ">>> Adding embeddings to vector store <<<"
+        )
+
+        self.vector_store.add_chunks(
+            chunks=self.chunks,
+            embeddings=embeddings,
+        )
+
+        print(
+            ">>> Document indexing complete <<<"
+        )
 
 
     def build_context(self, results):
@@ -50,26 +107,30 @@ class RAGPipeline:
 
             context_parts.append(
                 f"""[Source {index}]
+
 Page: {chunk.metadata.page_number}
+
 Chunk: {chunk.metadata.chunk_index}
 
 {chunk.content}"""
             )
 
-        return "\n\n".join(context_parts)
+        return "\n\n".join(
+            context_parts
+        )
 
 
     def answer(
-
         self,
-
         query: str,
-
         retrieval_k: int = RETRIEVAL_TOP_K,
-
         final_k: int = FINAL_TOP_K,
-
     ):
+
+        if not query.strip():
+            raise ValueError(
+                "Question cannot be empty."
+            )
 
         # Step 1: Create query embedding
 
@@ -106,7 +167,7 @@ Chunk: {chunk.metadata.chunk_index}
             self.hybrid_search.fuse(
                 semantic_results=semantic_results,
                 bm25_results=bm25_results,
-                top_k=retrieval_k,
+                top_k=HYBRID_TOP_K,
             )
         )
 
@@ -122,6 +183,20 @@ Chunk: {chunk.metadata.chunk_index}
         )
 
 
+        # Handle no relevant results
+
+        if not reranked_results:
+
+            return {
+                "answer": (
+                    "The provided research context does not "
+                    "contain enough information to answer "
+                    "this question."
+                ),
+                "sources": [],
+            }
+
+
         # Step 6: Build research context
 
         context = self.build_context(
@@ -129,36 +204,42 @@ Chunk: {chunk.metadata.chunk_index}
         )
 
 
-        # Step 7: Create prompt
+        # Step 7: Create Gemini prompt
 
         prompt = f"""
-
 You are ResearchPilot AI.
 
 Answer the user's question using ONLY the research context.
 
 Instructions:
+
 - Give the answer directly.
 - Do not explain your reasoning.
-- Do not mention the research context or sources unless citing them.
 - Keep the answer concise, maximum 2 short paragraphs.
 - Use plain text.
-- Do NOT use Markdown.
-- Do NOT use bullet points unless necessary.
-- Use real line breaks, not the characters \\n.
+- Do not use Markdown.
+- Use real line breaks.
 - Cite factual statements using [1], [2], etc.
 - Do not invent citations.
-- If the answer cannot be found in the context, say exactly:
+- Only cite source numbers that exist in the research context.
+
+If the answer cannot be found in the context, say exactly:
+
 The provided research context does not contain enough information to answer this question.
 
 Research context:
+
 {context}
 
 Question:
+
 {query}
 
-Answer:"""
-        # Step 8: Generate answer
+Answer:
+"""
+
+
+        # Step 8: Generate answer using Gemini
 
         response = self.llm.generate(
             prompt
@@ -166,9 +247,6 @@ Answer:"""
 
 
         return {
-
             "answer": response,
-
             "sources": reranked_results,
-
         }

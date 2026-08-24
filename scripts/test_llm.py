@@ -1,4 +1,4 @@
-from backend.llm.ollama_client import OllamaClient
+from backend.llm.gemini_client import OllamaClient
 
 
 def main():
