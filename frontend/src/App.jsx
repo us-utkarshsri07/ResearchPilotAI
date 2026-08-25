@@ -44,11 +44,17 @@ function App() {
   const [sources, setSources] =
     useState([]);
 
+  const [documentIds, setDocumentIds] =
+    useState([]);
+
   const [loading, setLoading] =
     useState(false);
 
   const [askError, setAskError] =
     useState("");
+
+  const [expandedSource, setExpandedSource] =
+    useState(null);
 
   const handleFileSelect = async (
     selectedFile
@@ -82,6 +88,8 @@ function App() {
 
     setSources([]);
 
+    setExpandedSource(null);
+
     setAskError("");
 
     try {
@@ -89,7 +97,15 @@ function App() {
         await uploadDocument(selectedFile);
 
       setUploadResult(result);
+      setDocumentIds((current) => {
+        if (!result?.document_id) {
+          return current;
+        }
 
+        return current.includes(result.document_id)
+          ? current
+          : [...current, result.document_id];
+      });
       setUploadStatus("ready");
     } catch (error) {
       setUploadStatus("error");
@@ -132,7 +148,10 @@ function App() {
 
     setSources([]);
 
+    setExpandedSource(null);
+
     setAskError("");
+    setDocumentIds([]);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -159,9 +178,14 @@ function App() {
 
     setSources([]);
 
+    setExpandedSource(null);
+
     try {
       const data =
-        await askQuestion(trimmedQuestion);
+        await askQuestion(
+          trimmedQuestion,
+          documentIds
+        );
 
       setAnswer(data.answer || "");
 
@@ -549,79 +573,111 @@ function App() {
                   ) : (
                     <div className="sources-grid">
                       {sources.map(
-                        (source, index) => (
-                          <article
-                            className="source-card"
-                            key={
-                              source.chunk_id ||
-                              `${source.page_number}-${source.chunk_index}-${index}`
-                            }
-                          >
-                            <div className="source-top">
-                              <span className="source-number">
-                                {String(
-                                  index + 1
-                                ).padStart(
-                                  2,
-                                  "0"
-                                )}
-                              </span>
+                        (source, index) => {
+                          const isExpanded =
+                            expandedSource ===
+                            index;
 
-                              <span className="source-location">
-                                Page{" "}
-                                {source.page_number ??
-                                  "—"}{" "}
-                                · Chunk{" "}
-                                {source.chunk_index ??
-                                  index + 1}
-                              </span>
+                          return (
+                            <article
+                              className={`source-card ${
+                                isExpanded
+                                  ? "expanded"
+                                  : ""
+                              }`}
+                              key={
+                                source.chunk_id ||
+                                `${source.page_number}-${source.chunk_index}-${index}`
+                              }
+                            >
+                              <div className="source-top">
+                                <span className="source-number">
+                                  {String(
+                                    index + 1
+                                  ).padStart(
+                                    2,
+                                    "0"
+                                  )}
+                                </span>
 
-                              <span>
-                                ▤
-                              </span>
-                            </div>
+                                <span className="source-location">
+                                  Page{" "}
+                                  {source.page_number ??
+                                    "—"}
+                                  {" · "}
+                                  Chunk{" "}
+                                  {source.chunk_index ??
+                                    index + 1}
+                                </span>
 
-                            <p className="source-content">
-                              {source.content ||
-                                "No passage text returned."}
-                            </p>
-
-                            {typeof source.score ===
-                              "number" && (
-                              <div className="relevance">
-                                <div className="relevance-label">
-                                  <span>
-                                    RELEVANCE
-                                  </span>
-
-                                  <span>
-                                    {Math.round(
-                                      source.score *
-                                        100
-                                    )}
-                                    %
-                                  </span>
-                                </div>
-
-                                <div className="relevance-track">
-                                  <div
-                                    className="relevance-bar"
-                                    style={{
-                                      width: `${Math.min(
-                                        100,
-                                        Math.max(
-                                          3,
-                                          source.score *
-                                            100
-                                        )
-                                      )}%`,
-                                    }}
-                                  />
-                                </div>
+                                <span>
+                                  ▤
+                                </span>
                               </div>
-                            )}
-                          </article>
-                        )
+
+                              <p
+                                className={`source-content ${
+                                  isExpanded
+                                    ? "show-full"
+                                    : ""
+                                }`}
+                              >
+                                {source.content ||
+                                  "No passage text returned."}
+                              </p>
+
+                              {typeof source.score ===
+                                "number" && (
+                                <div className="relevance">
+                                  <div className="relevance-label">
+                                    <span>
+                                      RELEVANCE
+                                    </span>
+
+                                    <span>
+                                      {Math.round(
+                                        source.score *
+                                          100
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+
+                                  <div className="relevance-track">
+                                    <div
+                                      className="relevance-bar"
+                                      style={{
+                                        width: `${Math.min(
+                                          100,
+                                          Math.max(
+                                            3,
+                                            source.score *
+                                              100
+                                          )
+                                        )}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              <button
+                                className="source-toggle"
+                                onClick={() =>
+                                  setExpandedSource(
+                                    isExpanded
+                                      ? null
+                                      : index
+                                  )
+                                }
+                              >
+                                {isExpanded
+                                  ? "Show less"
+                                  : "View full source"}
+                              </button>
+                            </article>
+                          );
+                        }
                       )}
                     </div>
                   )}

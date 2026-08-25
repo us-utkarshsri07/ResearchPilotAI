@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 
@@ -6,6 +7,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATASET_DIR = BASE_DIR / "datasets"
 
 RAW_DATA_DIR = DATASET_DIR / "raw"
+
+QDRANT_PATH = BASE_DIR / "data" / "qdrant"
+QDRANT_URL = os.getenv("QDRANT_URL")
 
 
 # Retrieval configuration

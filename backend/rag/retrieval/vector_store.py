@@ -1,3 +1,5 @@
+from threading import Lock
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -6,6 +8,35 @@ from qdrant_client.models import (
 )
 
 from backend.rag.ingestion.schemas import Chunk
+from backend.core.config import QDRANT_PATH, QDRANT_URL
+
+
+_client = None
+_client_lock = Lock()
+
+
+def get_qdrant_client() -> QdrantClient:
+    global _client
+
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                if QDRANT_URL:
+                    _client = QdrantClient(url=QDRANT_URL)
+                else:
+                    QDRANT_PATH.mkdir(parents=True, exist_ok=True)
+                    _client = QdrantClient(path=str(QDRANT_PATH))
+
+    return _client
+
+
+def close_qdrant_client() -> None:
+    global _client
+
+    with _client_lock:
+        if _client is not None:
+            _client.close()
+            _client = None
 
 
 class VectorStore:
@@ -17,9 +48,7 @@ class VectorStore:
     ):
         self.collection_name = collection_name
 
-        self.client = QdrantClient(
-            path="data/qdrant"
-        )
+        self.client = get_qdrant_client()
 
         self._create_collection(
             vector_size=vector_size

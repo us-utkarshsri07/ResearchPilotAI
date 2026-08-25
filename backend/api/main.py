@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
 
@@ -18,12 +19,20 @@ from backend.core.config import (
 from backend.rag.chunking.text_chunker import TextChunker
 from backend.rag.ingestion.pdf_loader import PDFLoader
 from backend.rag.pipeline import RAGPipeline
+from backend.rag.retrieval.vector_store import close_qdrant_client
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    close_qdrant_client()
 
 
 app = FastAPI(
     title="ResearchPilot AI",
     description="AI-powered research assistant",
     version="0.2.0",
+    lifespan=lifespan,
 )
 
 

@@ -38,3 +38,17 @@ Document ingestion
 - React
 - Docker
 - MLflow
+
+## Running
+
+Start the API from the repository root with one worker when using the embedded Qdrant store:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000
+```
+
+The application shares one Qdrant client per process and closes it during shutdown. For multiple API workers or multiple API instances, run Qdrant as a server and set `QDRANT_URL` before starting the API:
+
+```powershell
+$env:QDRANT_URL = "http://127.0.0.1:6333"
+```

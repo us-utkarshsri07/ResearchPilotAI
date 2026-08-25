@@ -40,17 +40,20 @@ export async function uploadDocument(file) {
   }
 }
 
-export async function askQuestion(question) {
+export async function askQuestion(question, document_ids = []) {
   try {
     const response = await fetch(
       `${API_BASE_URL}/ask`,
       {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           question,
+          document_ids,
         }),
       }
     );

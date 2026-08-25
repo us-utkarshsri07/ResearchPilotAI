@@ -61,3 +61,7 @@ data/
 node_modules/
 .env
 __pycache__/
+
+data/qdrant
+datasets/raw/
+datasets/uploads
