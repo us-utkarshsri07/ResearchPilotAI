@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL =
+  "http://127.0.0.1:8000";
 
 async function handleResponse(response) {
   const data = await response.json();
@@ -17,7 +18,10 @@ async function handleResponse(response) {
 export async function uploadDocument(file) {
   const formData = new FormData();
 
-  formData.append("file", file);
+  formData.append(
+    "file",
+    file
+  );
 
   try {
     const response = await fetch(
@@ -40,17 +44,19 @@ export async function uploadDocument(file) {
   }
 }
 
-export async function askQuestion(question, document_ids = []) {
+export async function askQuestion(
+  question,
+  document_ids = []
+) {
   try {
     const response = await fetch(
       `${API_BASE_URL}/ask`,
       {
         method: "POST",
-
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type":
+            "application/json",
         },
-
         body: JSON.stringify({
           question,
           document_ids,

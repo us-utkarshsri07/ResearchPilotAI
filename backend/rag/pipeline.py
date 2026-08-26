@@ -63,7 +63,6 @@ class RAGPipeline:
         # Create embeddings and store chunks
         self._index_chunks()
 
-
     def _index_chunks(self):
 
         print(
@@ -95,7 +94,6 @@ class RAGPipeline:
             ">>> Document indexing complete <<<"
         )
 
-
     def build_context(self, results):
 
         context_parts = []
@@ -119,30 +117,63 @@ Chunk: {chunk.metadata.chunk_index}
             context_parts
         )
 
+    def build_conversation_context(
+        self,
+        conversation_history: list[dict] | None,
+    ) -> str:
+
+        if not conversation_history:
+            return "No previous conversation."
+
+        history_parts = []
+
+        for message in conversation_history:
+
+            role = message.get("role")
+            content = message.get("content")
+
+            if not role or not content:
+                continue
+
+            if role == "user":
+
+                history_parts.append(
+                    f"User: {content}"
+                )
+
+            elif role == "assistant":
+
+                history_parts.append(
+                    f"Assistant: {content}"
+                )
+
+        if not history_parts:
+            return "No previous conversation."
+
+        return "\n".join(history_parts)
 
     def answer(
         self,
         query: str,
+        conversation_history: list[dict] | None = None,
         retrieval_k: int = RETRIEVAL_TOP_K,
         final_k: int = FINAL_TOP_K,
     ):
 
         if not query.strip():
+
             raise ValueError(
                 "Question cannot be empty."
             )
 
         # Step 1: Create query embedding
-
         query_embedding = (
             self.embedding_model.embed_query(
                 query
             )
         )
 
-
         # Step 2: Semantic search
-
         semantic_results = (
             self.vector_store.search_chunks(
                 query_embedding=query_embedding,
@@ -150,9 +181,7 @@ Chunk: {chunk.metadata.chunk_index}
             )
         )
 
-
         # Step 3: BM25 search
-
         bm25_results = (
             self.bm25_search.search(
                 query=query,
@@ -160,9 +189,7 @@ Chunk: {chunk.metadata.chunk_index}
             )
         )
 
-
         # Step 4: Hybrid search
-
         hybrid_results = (
             self.hybrid_search.fuse(
                 semantic_results=semantic_results,
@@ -171,9 +198,7 @@ Chunk: {chunk.metadata.chunk_index}
             )
         )
 
-
         # Step 5: Rerank results
-
         reranked_results = (
             self.reranker.rerank(
                 query=query,
@@ -182,9 +207,7 @@ Chunk: {chunk.metadata.chunk_index}
             )
         )
 
-
         # Handle no relevant results
-
         if not reranked_results:
 
             return {
@@ -196,36 +219,58 @@ Chunk: {chunk.metadata.chunk_index}
                 "sources": [],
             }
 
-
         # Step 6: Build research context
-
         context = self.build_context(
             reranked_results
         )
 
+        # Step 7: Build conversation context
+        conversation_context = (
+            self.build_conversation_context(
+                conversation_history
+            )
+        )
 
-        # Step 7: Create Gemini prompt
-
+        # Step 8: Create Gemini prompt
         prompt = f"""
 You are ResearchPilot AI.
 
 Answer the user's question using ONLY the research context.
 
+Previous conversation is provided only to help understand
+follow-up questions and references such as "it", "that",
+"this method", or "explain more".
+
+Do not use information from the conversation as a factual
+source unless it is supported by the research context.
+
 Instructions:
 
 - Give the answer directly.
+
 - Do not explain your reasoning.
+
 - Keep the answer concise, maximum 2 short paragraphs.
+
 - Use plain text.
+
 - Do not use Markdown.
+
 - Use real line breaks.
+
 - Cite factual statements using [1], [2], etc.
+
 - Do not invent citations.
+
 - Only cite source numbers that exist in the research context.
 
 If the answer cannot be found in the context, say exactly:
 
 The provided research context does not contain enough information to answer this question.
+
+Previous conversation:
+
+{conversation_context}
 
 Research context:
 
@@ -238,13 +283,10 @@ Question:
 Answer:
 """
 
-
-        # Step 8: Generate answer using Gemini
-
+        # Step 9: Generate answer using Gemini
         response = self.llm.generate(
             prompt
         )
-
 
         return {
             "answer": response,

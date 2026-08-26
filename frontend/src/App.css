@@ -756,3 +756,172 @@ footer {
     width: 100%;
   }
 }
+
+.document-metadata {
+  margin-top: 20px;
+  padding-top: 16px;
+
+  border-top: 1px solid
+    rgba(255, 255, 255, 0.08);
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 14px;
+}
+
+.metadata-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  min-width: 0;
+}
+
+.metadata-label {
+  font-size: 10px;
+
+  letter-spacing: 0.14em;
+
+  color: #8f8aa8;
+}
+
+.metadata-value {
+  font-size: 14px;
+
+  color: #d6d2e3;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .document-metadata {
+    grid-template-columns: 1fr;
+  }
+}
+
+.conversation-history {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid rgba(151, 125, 214, 0.2);
+  border-radius: 24px;
+  background: rgba(25, 24, 38, 0.75);
+}
+
+.conversation-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.conversation-history-label {
+  color: #c4b5fd;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.history-count {
+  color: #c4b5fd;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.conversation-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  padding: 18px 22px;
+
+  border: 1px solid transparent;
+  border-radius: 16px;
+
+  background: rgba(39, 37, 58, 0.75);
+
+  color: #d8d4e8;
+
+  cursor: pointer;
+  text-align: left;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.history-item:hover {
+  background: rgba(54, 49, 78, 0.9);
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+.history-item.active {
+  background: rgba(62, 55, 91, 0.9);
+  border-color: rgba(167, 139, 250, 0.45);
+}
+
+.history-item-number {
+  flex-shrink: 0;
+
+  color: #d8ccff;
+
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.history-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  min-width: 0;
+  flex: 1;
+}
+
+.history-item-label {
+  color: #a69bbf;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  letter-spacing: 0.18em;
+}
+
+.history-question {
+  overflow: hidden;
+
+  color: #e5e1ef;
+
+  font-size: 16px;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.history-arrow {
+  flex-shrink: 0;
+
+  color: #b9a8ed;
+
+  font-size: 22px;
+
+  transition: transform 0.2s ease;
+}
+
+.history-item:hover .history-arrow {
+  transform: translateX(4px);
+}

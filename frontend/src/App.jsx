@@ -7,7 +7,12 @@ import {
   uploadDocument,
 } from "./services/api";
 
+
 function formatFileSize(bytes) {
+  if (!bytes) {
+    return "Unknown size";
+  }
+
   if (bytes < 1024 * 1024) {
     return `${Math.max(
       1,
@@ -21,10 +26,50 @@ function formatFileSize(bytes) {
   ).toFixed(1)} MB`;
 }
 
+
+function formatAuthors(author) {
+  if (!author) {
+    return "Not available";
+  }
+
+  const authors = author
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (authors.length <= 3) {
+    return authors.join(", ");
+  }
+
+  return `${authors
+    .slice(0, 3)
+    .join(", ")} +${authors.length - 3} more`;
+}
+
+
+function formatRelevance(score) {
+  console.log("RAW RELEVANCE SCORE:", score);
+
+  if (
+    typeof score !== "number" ||
+    !Number.isFinite(score)
+  ) {
+    return 0;
+  }
+
+  const similarity = 1 / (1 + score);
+
+  return Math.round(
+    similarity * 100
+  );
+}
+
+
 function App() {
   const fileInputRef = useRef(null);
 
-  const [file, setFile] = useState(null);
+  const [file, setFile] =
+    useState(null);
 
   const [uploadStatus, setUploadStatus] =
     useState("idle");
@@ -44,9 +89,6 @@ function App() {
   const [sources, setSources] =
     useState([]);
 
-  const [documentIds, setDocumentIds] =
-    useState([]);
-
   const [loading, setLoading] =
     useState(false);
 
@@ -55,6 +97,17 @@ function App() {
 
   const [expandedSource, setExpandedSource] =
     useState(null);
+
+  const [
+    conversationHistory,
+    setConversationHistory,
+  ] = useState([]);
+
+  const [
+    activeHistoryIndex,
+    setActiveHistoryIndex,
+  ] = useState(null);
+
 
   const handleFileSelect = async (
     selectedFile
@@ -92,21 +145,18 @@ function App() {
 
     setAskError("");
 
+    setConversationHistory([]);
+
+    setActiveHistoryIndex(null);
+
     try {
       const result =
         await uploadDocument(selectedFile);
 
       setUploadResult(result);
-      setDocumentIds((current) => {
-        if (!result?.document_id) {
-          return current;
-        }
 
-        return current.includes(result.document_id)
-          ? current
-          : [...current, result.document_id];
-      });
       setUploadStatus("ready");
+
     } catch (error) {
       setUploadStatus("error");
 
@@ -117,14 +167,20 @@ function App() {
     }
   };
 
-  const handleFileChange = (event) => {
+
+  const handleFileChange = (
+    event
+  ) => {
     const selectedFile =
       event.target.files?.[0];
 
     handleFileSelect(selectedFile);
   };
 
-  const handleDrop = (event) => {
+
+  const handleDrop = (
+    event
+  ) => {
     event.preventDefault();
 
     const selectedFile =
@@ -132,6 +188,7 @@ function App() {
 
     handleFileSelect(selectedFile);
   };
+
 
   const resetDocument = () => {
     setFile(null);
@@ -151,12 +208,16 @@ function App() {
     setExpandedSource(null);
 
     setAskError("");
-    setDocumentIds([]);
+
+    setConversationHistory([]);
+
+    setActiveHistoryIndex(null);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
+
 
   const askResearchQuestion = async () => {
     const trimmedQuestion =
@@ -180,30 +241,91 @@ function App() {
 
     setExpandedSource(null);
 
+    setActiveHistoryIndex(null);
+
     try {
       const data =
         await askQuestion(
-          trimmedQuestion,
-          documentIds
+          trimmedQuestion
         );
 
-      setAnswer(data.answer || "");
+      const receivedAnswer =
+        data.answer || "";
 
-      setSources(data.sources || []);
+      const receivedSources =
+        data.sources || [];
+
+      setAnswer(
+        receivedAnswer
+      );
+
+      setSources(
+        receivedSources
+      );
+
+      setConversationHistory(
+        (current) => [
+          {
+            question:
+              trimmedQuestion,
+            answer:
+              receivedAnswer,
+            sources:
+              receivedSources,
+          },
+          ...current,
+        ]
+      );
+
+      setActiveHistoryIndex(0);
+
     } catch (error) {
       setAskError(
         error.message ||
-          "The question could not be answered."
+        "The question could not be answered."
       );
+
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuestionKeyDown = (event) => {
+
+  const handleHistoryClick = (
+    historyItem,
+    index
+  ) => {
+    setQuestion(
+      historyItem.question
+    );
+
+    setAnswer(
+      historyItem.answer
+    );
+
+    setSources(
+      historyItem.sources
+    );
+
+    setAskError("");
+
+    setExpandedSource(null);
+
+    setActiveHistoryIndex(
+      index
+    );
+  };
+
+
+  const handleQuestionKeyDown = (
+    event
+  ) => {
     if (
       event.key === "Enter" &&
-      (event.ctrlKey || event.metaKey)
+      (
+        event.ctrlKey ||
+        event.metaKey
+      )
     ) {
       event.preventDefault();
 
@@ -211,18 +333,24 @@ function App() {
     }
   };
 
+
   const documentReady =
     uploadStatus === "ready";
 
+
   return (
     <div className="app">
+
       <header className="navbar">
+
         <div className="nav-brand">
+
           <div className="brand-icon">
             ◈
           </div>
 
           <div>
+
             <div className="logo">
               ResearchPilot
             </div>
@@ -230,16 +358,22 @@ function App() {
             <div className="logo-subtitle">
               AI RESEARCH ASSISTANT
             </div>
+
           </div>
+
         </div>
 
         <div className="system-status">
           RETRIEVAL AUGMENTED
         </div>
+
       </header>
 
+
       <section className="hero">
+
         <div className="hero-grid">
+
           <p className="eyebrow">
             READ LESS · UNDERSTAND MORE
           </p>
@@ -258,6 +392,7 @@ function App() {
           </p>
 
           <div className="feature-tags">
+
             <span>
               ◉ Page-level citations
             </span>
@@ -269,15 +404,24 @@ function App() {
             <span>
               ◇ Hybrid retrieval
             </span>
+
           </div>
+
         </div>
+
       </section>
 
+
       <main className="workspace">
+
         <div className="left-panel">
+
           <section className="panel">
+
             <div className="section-header">
+
               <div>
+
                 <p className="step-label">
                   STEP 01
                 </p>
@@ -285,15 +429,19 @@ function App() {
                 <h2>
                   Source document
                 </h2>
+
               </div>
 
               <span className="pdf-badge">
                 PDF
               </span>
+
             </div>
+
 
             {uploadStatus === "idle" ||
             uploadStatus === "error" ? (
+
               <div
                 className="upload-zone"
                 onClick={() =>
@@ -304,6 +452,7 @@ function App() {
                 }
                 onDrop={handleDrop}
               >
+
                 <div className="upload-icon">
                   ↑
                 </div>
@@ -328,26 +477,40 @@ function App() {
                   onChange={handleFileChange}
                   hidden
                 />
+
               </div>
+
             ) : (
+
               <div className="document-card">
+
                 <div className="document-top">
+
                   <div className="document-icon">
                     ▤
                   </div>
 
                   <div className="document-info">
+
                     <h3>
-                      {file?.name ||
+                      {uploadResult
+                        ?.document_metadata
+                        ?.filename ||
+                        file?.name ||
                         uploadResult?.filename}
                     </h3>
 
                     <p>
+
                       {file
                         ? formatFileSize(
                             file.size
                           )
-                        : "Document"}
+                        : formatFileSize(
+                            uploadResult
+                              ?.document_metadata
+                              ?.file_size
+                          )}
 
                       {uploadResult?.pages
                         ? ` · ${uploadResult.pages} pages`
@@ -356,7 +519,9 @@ function App() {
                       {uploadResult?.chunks
                         ? ` · ${uploadResult.chunks} chunks`
                         : ""}
+
                     </p>
+
                   </div>
 
                   <button
@@ -369,43 +534,140 @@ function App() {
                   >
                     ×
                   </button>
+
                 </div>
+
+
+                {uploadStatus === "ready" && (
+
+                  <>
+
+                    <div className="document-metadata">
+
+                      <div className="metadata-item">
+
+                        <span>
+                          TITLE
+                        </span>
+
+                        <p>
+                          {uploadResult
+                            ?.document_metadata
+                            ?.title ||
+                            "Not available"}
+                        </p>
+
+                      </div>
+
+
+                      <div className="metadata-item">
+
+                        <span>
+                          AUTHOR
+                        </span>
+
+                        <p>
+                          {formatAuthors(
+                            uploadResult
+                              ?.document_metadata
+                              ?.author
+                          )}
+                        </p>
+
+                      </div>
+
+
+                      <div className="metadata-item">
+
+                        <span>
+                          PAGES
+                        </span>
+
+                        <p>
+                          {uploadResult
+                            ?.document_metadata
+                            ?.page_count ||
+                            uploadResult?.pages ||
+                            "—"}
+                        </p>
+
+                      </div>
+
+
+                      <div className="metadata-item">
+
+                        <span>
+                          FILE SIZE
+                        </span>
+
+                        <p>
+                          {formatFileSize(
+                            uploadResult
+                              ?.document_metadata
+                              ?.file_size ||
+                              file?.size
+                          )}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+
+                    <div className="success-state">
+                      ✓ Indexed successfully and
+                      ready for questions
+                    </div>
+
+                  </>
+
+                )}
+
 
                 {uploadStatus ===
                   "processing" && (
+
                   <div className="processing-state">
+
                     <div className="processing-text">
+
                       <span className="spinner" />
 
                       Processing document and
                       creating embeddings...
+
                     </div>
 
                     <div className="progress-track">
                       <div className="progress-bar" />
                     </div>
+
                   </div>
+
                 )}
 
-                {uploadStatus === "ready" && (
-                  <div className="success-state">
-                    ✓ Indexed successfully and
-                    ready for questions
-                  </div>
-                )}
               </div>
+
             )}
 
+
             {uploadError && (
+
               <div className="error-box">
                 {uploadError}
               </div>
+
             )}
+
           </section>
 
+
           <section className="question-section">
+
             <div className="section-header question-header">
+
               <div>
+
                 <p className="step-label">
                   STEP 02
                 </p>
@@ -413,12 +675,15 @@ function App() {
                 <h2>
                   Ask the document
                 </h2>
+
               </div>
 
               <span className="sparkle">
                 ✦
               </span>
+
             </div>
+
 
             <div
               className={`question-card ${
@@ -427,6 +692,7 @@ function App() {
                   : ""
               }`}
             >
+
               <textarea
                 placeholder={
                   documentReady
@@ -448,7 +714,9 @@ function App() {
                 }
               />
 
+
               <div className="question-footer">
+
                 <span className="keyboard-hint">
                   Ctrl + Enter to send
                 </span>
@@ -468,10 +736,14 @@ function App() {
                     ? "Researching..."
                     : "Ask ResearchPilot"}
                 </button>
+
               </div>
+
             </div>
 
+
             <div className="suggestions">
+
               <button
                 disabled={!documentReady}
                 onClick={() =>
@@ -482,6 +754,7 @@ function App() {
               >
                 Summarise the contribution
               </button>
+
 
               <button
                 disabled={!documentReady}
@@ -494,6 +767,7 @@ function App() {
                 Methodology
               </button>
 
+
               <button
                 disabled={!documentReady}
                 onClick={() =>
@@ -504,19 +778,118 @@ function App() {
               >
                 Key limitations
               </button>
+
             </div>
+
+
+            {conversationHistory.length > 0 && (
+
+              <section className="conversation-history">
+
+                <div className="conversation-history-header">
+
+                  <span className="conversation-history-label">
+                    CONVERSATION HISTORY
+                  </span>
+
+                  <span className="history-count">
+                    {String(
+                      conversationHistory.length
+                    ).padStart(
+                      2,
+                      "0"
+                    )}
+                  </span>
+
+                </div>
+
+
+                <div className="conversation-history-list">
+
+                  {conversationHistory.map(
+                    (
+                      historyItem,
+                      index
+                    ) => (
+
+                      <button
+                        type="button"
+                        key={`${historyItem.question}-${index}`}
+                        className={`history-item ${
+                          activeHistoryIndex === index
+                            ? "active"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          handleHistoryClick(
+                            historyItem,
+                            index
+                          )
+                        }
+                      >
+
+                        <span className="history-item-number">
+
+                          {String(
+                            conversationHistory.length -
+                            index
+                          ).padStart(
+                            2,
+                            "0"
+                          )}
+
+                        </span>
+
+
+                        <div className="history-item-content">
+
+                          <span className="history-item-label">
+                            QUESTION
+                          </span>
+
+                          <span className="history-question">
+                            {historyItem.question}
+                          </span>
+
+                        </div>
+
+
+                        <span className="history-arrow">
+                          →
+                        </span>
+
+                      </button>
+
+                    )
+                  )}
+
+                </div>
+
+              </section>
+
+            )}
+
           </section>
+
         </div>
 
+
         <div className="right-panel">
+
+
           {loading && (
+
             <section className="answer-loading">
+
               <div className="loading-label">
+
                 <span className="pulse-dot" />
 
                 RETRIEVING PASSAGES ·
                 GENERATING ANSWER
+
               </div>
+
 
               <div className="skeleton-lines">
                 <div />
@@ -525,15 +898,21 @@ function App() {
                 <div />
               </div>
 
+
               <div className="progress-track">
                 <div className="progress-bar" />
               </div>
+
             </section>
+
           )}
+
 
           {!loading &&
             askError && (
+
               <section className="error-answer">
+
                 <h3>
                   Answer unavailable
                 </h3>
@@ -541,14 +920,20 @@ function App() {
                 <p>
                   {askError}
                 </p>
+
               </section>
+
             )}
+
 
           {!loading &&
             !askError &&
             answer && (
+
               <div className="answer-container">
+
                 <section className="answer-card">
+
                   <div className="answer-question">
                     “{question}”
                   </div>
@@ -556,29 +941,49 @@ function App() {
                   <div className="answer-content">
                     {answer}
                   </div>
+
                 </section>
 
+
                 <section className="sources-section">
+
                   <div className="sources-title">
+
                     RETRIEVED SOURCES
+
                     {sources.length > 0 &&
                       ` · ${sources.length}`}
+
                   </div>
 
+
                   {sources.length === 0 ? (
+
                     <div className="empty-sources">
                       No supporting passages were
                       returned for this answer.
                     </div>
+
                   ) : (
+
                     <div className="sources-grid">
+
                       {sources.map(
-                        (source, index) => {
+                        (
+                          source,
+                          index
+                        ) => {
+
                           const isExpanded =
-                            expandedSource ===
-                            index;
+                            expandedSource === index;
+
+                          const relevance =
+                            formatRelevance(
+                              source.score
+                            );
 
                           return (
+
                             <article
                               className={`source-card ${
                                 isExpanded
@@ -590,30 +995,44 @@ function App() {
                                 `${source.page_number}-${source.chunk_index}-${index}`
                               }
                             >
+
                               <div className="source-top">
+
                                 <span className="source-number">
+
                                   {String(
                                     index + 1
                                   ).padStart(
                                     2,
                                     "0"
                                   )}
+
                                 </span>
 
+
                                 <span className="source-location">
+
                                   Page{" "}
+
                                   {source.page_number ??
                                     "—"}
+
                                   {" · "}
+
                                   Chunk{" "}
+
                                   {source.chunk_index ??
                                     index + 1}
+
                                 </span>
+
 
                                 <span>
                                   ▤
                                 </span>
+
                               </div>
+
 
                               <p
                                 className={`source-content ${
@@ -622,44 +1041,47 @@ function App() {
                                     : ""
                                 }`}
                               >
+
                                 {source.content ||
                                   "No passage text returned."}
+
                               </p>
+
 
                               {typeof source.score ===
                                 "number" && (
+
                                 <div className="relevance">
+
                                   <div className="relevance-label">
+
                                     <span>
-                                      RELEVANCE
+                                      RETRIEVAL MATCH
                                     </span>
 
                                     <span>
-                                      {Math.round(
-                                        source.score *
-                                          100
-                                      )}
-                                      %
+                                      {relevance}%
                                     </span>
+
                                   </div>
 
+
                                   <div className="relevance-track">
+
                                     <div
                                       className="relevance-bar"
                                       style={{
-                                        width: `${Math.min(
-                                          100,
-                                          Math.max(
-                                            3,
-                                            source.score *
-                                              100
-                                          )
-                                        )}%`,
+                                        width:
+                                          `${relevance}%`,
                                       }}
                                     />
+
                                   </div>
+
                                 </div>
+
                               )}
+
 
                               <button
                                 className="source-toggle"
@@ -671,24 +1093,37 @@ function App() {
                                   )
                                 }
                               >
+
                                 {isExpanded
                                   ? "Show less"
                                   : "View full source"}
+
                               </button>
+
                             </article>
+
                           );
+
                         }
                       )}
+
                     </div>
+
                   )}
+
                 </section>
+
               </div>
+
             )}
+
 
           {!loading &&
             !askError &&
             !answer && (
+
               <section className="empty-workspace">
+
                 <div className="empty-icon">
                   ◈
                 </div>
@@ -704,12 +1139,18 @@ function App() {
                     ? "Answers will appear here together with the retrieved passages used to generate them."
                     : "Upload a PDF to build a searchable research workspace."}
                 </p>
+
               </section>
+
             )}
+
         </div>
+
       </main>
 
+
       <footer>
+
         <span>
           RESEARCHPILOT AI
         </span>
@@ -717,9 +1158,12 @@ function App() {
         <span>
           Answers are generated from your uploaded document.
         </span>
+
       </footer>
+
     </div>
   );
 }
+
 
 export default App;
