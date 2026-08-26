@@ -6,7 +6,9 @@ from backend.core.config import (
     HYBRID_TOP_K,
 )
 
-from backend.llm.gemini_client import GeminiClient
+from backend.llm.gemini_client import (
+    GeminiClient,
+)
 
 from backend.rag.embeddings.embedding_model import (
     EmbeddingModel,
@@ -31,133 +33,247 @@ from backend.rag.retrieval.vector_store import (
 
 class RAGPipeline:
 
-    def __init__(self, chunks):
+    def __init__(self):
 
-        if not chunks:
-            raise ValueError(
-                "Cannot create a RAG pipeline without chunks."
-            )
+        self.chunks = []
 
-        self.chunks = chunks
-
-        # Initialize embedding model
-        self.embedding_model = EmbeddingModel()
-
-        # Initialize vector store
-        self.vector_store = VectorStore()
-
-        # Initialize BM25
-        self.bm25_search = BM25Search(
-            chunks=self.chunks
+        # Initialize embedding model once.
+        self.embedding_model = (
+            EmbeddingModel()
         )
 
-        # Initialize hybrid search
-        self.hybrid_search = HybridSearch()
+        # One shared vector collection
+        # for all uploaded documents.
+        self.vector_store = (
+            VectorStore()
+        )
 
-        # Initialize reranker
-        self.reranker = CrossEncoderReranker()
+        self.hybrid_search = (
+            HybridSearch()
+        )
 
-        # Initialize Gemini client
+        self.reranker = (
+            CrossEncoderReranker()
+        )
+
         self.llm = GeminiClient()
 
-        # Create embeddings and store chunks
-        self._index_chunks()
+        self.bm25_search = None
 
-    def _index_chunks(self):
+
+    def add_chunks(
+        self,
+        chunks,
+    ):
+
+        if not chunks:
+
+            raise ValueError(
+                "Cannot index an empty list "
+                "of chunks."
+            )
 
         print(
+
             f">>> Creating embeddings for "
-            f"{len(self.chunks)} chunks <<<"
+            f"{len(chunks)} chunks <<<"
+
         )
 
         texts = [
+
             chunk.content
-            for chunk in self.chunks
+            for chunk in chunks
+
         ]
 
         embeddings = (
-            self.embedding_model.embed_documents(
-                texts
-            )
+            self.embedding_model
+            .embed_documents(texts)
         )
 
         print(
-            ">>> Adding embeddings to vector store <<<"
+            ">>> Adding embeddings to "
+            "vector store <<<"
         )
 
         self.vector_store.add_chunks(
-            chunks=self.chunks,
+
+            chunks=chunks,
+
             embeddings=embeddings,
+
+        )
+
+        # Keep all chunks in memory so BM25
+        # can search across all documents.
+        self.chunks.extend(chunks)
+
+        # Rebuild BM25 with the complete
+        # document collection.
+        self.bm25_search = BM25Search(
+
+            chunks=self.chunks
+
         )
 
         print(
-            ">>> Document indexing complete <<<"
+
+            f">>> Total indexed chunks: "
+            f"{len(self.chunks)} <<<"
+
         )
 
-    def build_context(self, results):
+
+    def _get_chunks_for_documents(
+        self,
+        document_ids: list[str] | None,
+    ):
+
+        # Empty document_ids means
+        # search across every document.
+        if not document_ids:
+
+            return self.chunks
+
+        selected_ids = set(
+            document_ids
+        )
+
+        return [
+
+            chunk
+
+            for chunk in self.chunks
+
+            if (
+                chunk.metadata.document_id
+                in selected_ids
+            )
+
+        ]
+
+
+    def build_context(
+        self,
+        results,
+    ):
 
         context_parts = []
 
-        for index, (chunk, score) in enumerate(
+        for index, (
+            chunk,
+            score,
+        ) in enumerate(
+
             results,
+
             start=1,
+
         ):
 
             context_parts.append(
+
                 f"""[Source {index}]
+
+Document: {chunk.metadata.filename}
 
 Page: {chunk.metadata.page_number}
 
 Chunk: {chunk.metadata.chunk_index}
 
 {chunk.content}"""
+
             )
 
         return "\n\n".join(
             context_parts
         )
 
+
     def build_conversation_context(
+
         self,
-        conversation_history: list[dict] | None,
+
+        conversation_history: (
+            list[dict] | None
+        ),
+
     ) -> str:
 
         if not conversation_history:
-            return "No previous conversation."
+
+            return (
+                "No previous conversation."
+            )
 
         history_parts = []
 
-        for message in conversation_history:
+        for message in (
+            conversation_history
+        ):
 
-            role = message.get("role")
-            content = message.get("content")
+            role = message.get(
+                "role"
+            )
+
+            content = message.get(
+                "content"
+            )
 
             if not role or not content:
+
                 continue
 
             if role == "user":
 
                 history_parts.append(
+
                     f"User: {content}"
+
                 )
 
             elif role == "assistant":
 
                 history_parts.append(
+
                     f"Assistant: {content}"
+
                 )
 
         if not history_parts:
-            return "No previous conversation."
 
-        return "\n".join(history_parts)
+            return (
+                "No previous conversation."
+            )
+
+        return "\n".join(
+            history_parts
+        )
+
 
     def answer(
+
         self,
+
         query: str,
-        conversation_history: list[dict] | None = None,
-        retrieval_k: int = RETRIEVAL_TOP_K,
-        final_k: int = FINAL_TOP_K,
+
+        document_ids: (
+            list[str] | None
+        ) = None,
+
+        conversation_history: (
+            list[dict] | None
+        ) = None,
+
+        retrieval_k: int = (
+            RETRIEVAL_TOP_K
+        ),
+
+        final_k: int = (
+            FINAL_TOP_K
+        ),
+
     ):
 
         if not query.strip():
@@ -166,73 +282,166 @@ Chunk: {chunk.metadata.chunk_index}
                 "Question cannot be empty."
             )
 
-        # Step 1: Create query embedding
+
+        selected_chunks = (
+            self._get_chunks_for_documents(
+                document_ids
+            )
+        )
+
+
+        if not selected_chunks:
+
+            return {
+
+                "answer": (
+                    "The selected documents do "
+                    "not contain enough information "
+                    "to answer this question."
+                ),
+
+                "sources": [],
+
+            }
+
+
+        # Step 1:
+        # Create query embedding.
         query_embedding = (
-            self.embedding_model.embed_query(
-                query
-            )
+
+            self.embedding_model
+            .embed_query(query)
+
         )
 
-        # Step 2: Semantic search
+
+        # Step 2:
+        # Semantic search.
         semantic_results = (
+
             self.vector_store.search_chunks(
-                query_embedding=query_embedding,
+
+                query_embedding=(
+                    query_embedding
+                ),
+
                 top_k=retrieval_k,
+
+                document_ids=document_ids,
+
             )
+
         )
 
-        # Step 3: BM25 search
+
+        # Step 3:
+        # Create BM25 only for the
+        # selected documents.
+        selected_bm25 = BM25Search(
+
+            chunks=selected_chunks
+
+        )
+
         bm25_results = (
-            self.bm25_search.search(
+
+            selected_bm25.search(
+
                 query=query,
+
                 top_k=retrieval_k,
+
             )
+
         )
 
-        # Step 4: Hybrid search
+
+        # Step 4:
+        # Hybrid search.
         hybrid_results = (
+
             self.hybrid_search.fuse(
-                semantic_results=semantic_results,
-                bm25_results=bm25_results,
-                top_k=HYBRID_TOP_K,
+
+                semantic_results=(
+                    semantic_results
+                ),
+
+                bm25_results=(
+                    bm25_results
+                ),
+
+                top_k=(
+                    HYBRID_TOP_K
+                ),
+
             )
+
         )
 
-        # Step 5: Rerank results
+
+        # Step 5:
+        # Rerank retrieved chunks.
         reranked_results = (
+
             self.reranker.rerank(
+
                 query=query,
-                candidates=hybrid_results,
+
+                candidates=(
+                    hybrid_results
+                ),
+
                 top_k=final_k,
+
             )
+
         )
 
-        # Handle no relevant results
+
         if not reranked_results:
 
             return {
+
                 "answer": (
-                    "The provided research context does not "
-                    "contain enough information to answer "
+
+                    "The provided research "
+                    "context does not contain "
+                    "enough information to answer "
                     "this question."
+
                 ),
+
                 "sources": [],
+
             }
 
-        # Step 6: Build research context
+
+        # Step 6:
+        # Build research context.
         context = self.build_context(
+
             reranked_results
+
         )
 
-        # Step 7: Build conversation context
+
+        # Step 7:
+        # Build conversation context.
         conversation_context = (
+
             self.build_conversation_context(
+
                 conversation_history
+
             )
+
         )
 
-        # Step 8: Create Gemini prompt
+
+        # Step 8:
+        # Create Gemini prompt.
         prompt = f"""
+
 You are ResearchPilot AI.
 
 Answer the user's question using ONLY the research context.
@@ -281,14 +490,23 @@ Question:
 {query}
 
 Answer:
+
 """
 
-        # Step 9: Generate answer using Gemini
+
+        # Step 9:
+        # Generate answer.
         response = self.llm.generate(
             prompt
         )
 
+
         return {
+
             "answer": response,
-            "sources": reranked_results,
+
+            "sources": (
+                reranked_results
+            ),
+
         }
