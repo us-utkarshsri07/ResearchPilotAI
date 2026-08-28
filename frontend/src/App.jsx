@@ -108,6 +108,14 @@ function App() {
     setActiveHistoryIndex,
   ] = useState(null);
 
+  // Active backend conversation.
+  // Null means the next question starts
+  // a new conversation.
+  const [
+    conversationId,
+    setConversationId,
+  ] = useState(null);
+
 
   const handleFileSelect = async (
     selectedFile
@@ -148,6 +156,10 @@ function App() {
     setConversationHistory([]);
 
     setActiveHistoryIndex(null);
+
+    // A newly uploaded document starts
+    // with no active conversation.
+    setConversationId(null);
 
     try {
       const result =
@@ -213,6 +225,10 @@ function App() {
 
     setActiveHistoryIndex(null);
 
+    // Reset the backend conversation
+    // when the document is removed.
+    setConversationId(null);
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -231,6 +247,19 @@ function App() {
       return;
     }
 
+    const documentId =
+      uploadResult
+        ?.document_metadata
+        ?.document_id;
+
+    if (!documentId) {
+      setAskError(
+        "Document ID is missing. Please upload the PDF again."
+      );
+
+      return;
+    }
+
     setLoading(true);
 
     setAskError("");
@@ -246,7 +275,9 @@ function App() {
     try {
       const data =
         await askQuestion(
-          trimmedQuestion
+          trimmedQuestion,
+          documentId,
+          conversationId
         );
 
       const receivedAnswer =
@@ -254,6 +285,15 @@ function App() {
 
       const receivedSources =
         data.sources || [];
+
+      // Store the conversation ID returned
+      // by the backend. The same ID will be
+      // used for future follow-up questions.
+      if (data.conversation_id) {
+        setConversationId(
+          data.conversation_id
+        );
+      }
 
       setAnswer(
         receivedAnswer
@@ -268,8 +308,10 @@ function App() {
           {
             question:
               trimmedQuestion,
+
             answer:
               receivedAnswer,
+
             sources:
               receivedSources,
           },
