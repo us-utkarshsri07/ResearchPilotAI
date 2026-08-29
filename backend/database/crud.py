@@ -45,9 +45,10 @@ def get_documents(
     db: Session,
 ) -> list[Document]:
 
-    return db.query(
-        Document
-    ).all()
+    return (
+        db.query(Document)
+        .all()
+    )
 
 
 def get_document_by_document_id(
@@ -58,7 +59,8 @@ def get_document_by_document_id(
     return (
         db.query(Document)
         .filter(
-            Document.document_id == document_id
+            Document.document_id
+            == document_id
         )
         .first()
     )
@@ -92,10 +94,50 @@ def get_conversation(
     return (
         db.query(Conversation)
         .filter(
-            Conversation.id == conversation_id
+            Conversation.id
+            == conversation_id
         )
         .first()
     )
+
+
+def get_conversations_by_document(
+    db: Session,
+    document_id: int,
+) -> list[Conversation]:
+
+    return (
+        db.query(Conversation)
+        .filter(
+            Conversation.document_id
+            == document_id
+        )
+        .order_by(
+            Conversation.created_at.desc()
+        )
+        .all()
+    )
+
+
+def delete_conversation(
+    db: Session,
+    conversation_id: int,
+) -> bool:
+
+    conversation = (
+        get_conversation(
+            db=db,
+            conversation_id=conversation_id,
+        )
+    )
+
+    if not conversation:
+        return False
+
+    db.delete(conversation)
+    db.commit()
+
+    return True
 
 
 # -------------------------
@@ -107,9 +149,13 @@ def create_message(
     conversation_id: int,
     role: str,
     content: str,
+    sources: list | None = None,
 ) -> Message:
 
-    if role not in {"user", "assistant"}:
+    if role not in {
+        "user",
+        "assistant",
+    }:
         raise ValueError(
             "Message role must be "
             "'user' or 'assistant'."
@@ -119,6 +165,10 @@ def create_message(
         conversation_id=conversation_id,
         role=role,
         content=content,
+
+        # Store RAG sources only when
+        # they are provided.
+        sources=sources,
     )
 
     db.add(message)
@@ -147,9 +197,10 @@ def get_conversation_messages(
         .all()
     )
 
-    # Messages were fetched newest first.
-    # Reverse them so the LLM receives
-    # the conversation in chronological order.
+    # Messages are fetched newest first.
+    # Reverse them so they are returned
+    # in chronological order.
+
     return list(
         reversed(messages)
     )

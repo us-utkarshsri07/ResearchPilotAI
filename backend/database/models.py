@@ -5,6 +5,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
 )
@@ -15,6 +16,7 @@ from backend.database.database import Base
 
 
 class Document(Base):
+
     __tablename__ = "documents"
 
     id = Column(
@@ -79,6 +81,7 @@ class Document(Base):
 
 
 class Conversation(Base):
+
     __tablename__ = "conversations"
 
     id = Column(
@@ -112,6 +115,7 @@ class Conversation(Base):
 
 
 class Message(Base):
+
     __tablename__ = "messages"
 
     id = Column(
@@ -134,6 +138,13 @@ class Message(Base):
     content = Column(
         Text,
         nullable=False,
+    )
+
+    # Retrieved RAG sources associated
+    # with this assistant response.
+    sources = Column(
+        JSON,
+        nullable=True,
     )
 
     created_at = Column(

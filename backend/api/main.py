@@ -27,6 +27,7 @@ from backend.database import crud
 
 from backend.api.schemas import (
     AnswerResponse,
+    ConversationListItemResponse,
     ConversationResponse,
     MessageResponse,
     QuestionRequest,
@@ -70,7 +71,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="ResearchPilot AI",
     description="AI-powered research assistant",
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
@@ -100,6 +101,10 @@ UPLOAD_DIR.mkdir(
 pipeline = RAGPipeline()
 
 
+# --------------------------------
+# Health
+# --------------------------------
+
 @app.get("/health")
 def health_check(
     db: Session = Depends(get_db),
@@ -115,6 +120,10 @@ def health_check(
         "documents": len(documents),
     }
 
+
+# --------------------------------
+# Upload PDF
+# --------------------------------
 
 @app.post("/upload")
 async def upload_pdf(
@@ -331,6 +340,10 @@ async def upload_pdf(
         )
 
 
+# --------------------------------
+# Get documents
+# --------------------------------
+
 @app.get("/documents")
 def get_documents(
     db: Session = Depends(get_db),
@@ -378,6 +391,96 @@ def get_documents(
         ]
     }
 
+
+# --------------------------------
+# List conversations
+# --------------------------------
+
+@app.get(
+    "/documents/{document_id}/conversations",
+    response_model=list[
+        ConversationListItemResponse
+    ],
+)
+def get_document_conversations(
+    document_id: str,
+    db: Session = Depends(get_db),
+):
+
+    document = (
+        crud.get_document_by_document_id(
+            db=db,
+            document_id=document_id,
+        )
+    )
+
+    if not document:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
+
+    conversations = (
+        crud.get_conversations_by_document(
+            db=db,
+            document_id=document.id,
+        )
+    )
+
+    conversation_list = []
+
+    for conversation in conversations:
+
+        messages = (
+            crud.get_conversation_messages(
+                db=db,
+                conversation_id=(
+                    conversation.id
+                ),
+                limit=100,
+            )
+        )
+
+        user_messages = [
+            message
+            for message in messages
+            if message.role == "user"
+        ]
+
+        preview = None
+
+        if user_messages:
+
+            preview = (
+                user_messages[-1]
+                .content
+            )
+
+        # Each user message represents
+        # one question/answer turn.
+        conversation_list.append(
+            ConversationListItemResponse(
+                conversation_id=(
+                    conversation.id
+                ),
+                created_at=(
+                    conversation.created_at
+                ),
+                message_count=(
+                    len(user_messages)
+                ),
+                preview=preview,
+            )
+        )
+
+    return conversation_list
+
+
+# --------------------------------
+# Load conversation
+# --------------------------------
+
 @app.get(
     "/conversations/{conversation_id}",
     response_model=ConversationResponse,
@@ -404,24 +507,178 @@ def get_conversation_history(
     messages = (
         crud.get_conversation_messages(
             db=db,
-            conversation_id=conversation.id,
+            conversation_id=(
+                conversation.id
+            ),
             limit=100,
         )
     )
 
-    return ConversationResponse(
-        conversation_id=conversation.id,
-        document_id=(
-            conversation.document.document_id
-        ),
-        messages=[
+    formatted_messages = []
+
+    for message in messages:
+
+        formatted_sources = []
+
+        # Sources are stored only on
+        # assistant messages.
+        if message.sources:
+
+            for source in message.sources:
+
+                try:
+
+                    formatted_sources.append(
+                        SourceResponse(
+                            document_id=(
+                                source.get(
+                                    "document_id",
+                                    ""
+                                )
+                            ),
+                            filename=(
+                                source.get(
+                                    "filename",
+                                    ""
+                                )
+                            ),
+                            page_number=int(
+                                source.get(
+                                    "page_number",
+                                    0
+                                )
+                            ),
+                            chunk_index=int(
+                                source.get(
+                                    "chunk_index",
+                                    0
+                                )
+                            ),
+                            score=float(
+                                source.get(
+                                    "score",
+                                    0
+                                )
+                            ),
+                            content=(
+                                source.get(
+                                    "content",
+                                    ""
+                                )
+                            ),
+                        )
+                    )
+
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+
+                    continue
+
+        formatted_messages.append(
             MessageResponse(
                 role=message.role,
                 content=message.content,
+                sources=formatted_sources,
             )
-            for message in messages
-        ],
+        )
+
+    return ConversationResponse(
+        conversation_id=conversation.id,
+        document_id=(
+            conversation
+            .document
+            .document_id
+        ),
+        messages=formatted_messages,
     )
+
+
+# --------------------------------
+# Start new conversation
+# --------------------------------
+
+@app.post(
+    "/documents/{document_id}/conversations",
+    response_model=ConversationListItemResponse,
+)
+def start_new_conversation(
+    document_id: str,
+    db: Session = Depends(get_db),
+):
+
+    document = (
+        crud.get_document_by_document_id(
+            db=db,
+            document_id=document_id,
+        )
+    )
+
+    if not document:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
+
+    conversation = (
+        crud.create_conversation(
+            db=db,
+            document_id=document.id,
+        )
+    )
+
+    return ConversationListItemResponse(
+        conversation_id=(
+            conversation.id
+        ),
+        created_at=(
+            conversation.created_at
+        ),
+        message_count=0,
+        preview=None,
+    )
+
+
+# --------------------------------
+# Delete conversation
+# --------------------------------
+
+@app.delete(
+    "/conversations/{conversation_id}",
+)
+def delete_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+):
+
+    deleted = (
+        crud.delete_conversation(
+            db=db,
+            conversation_id=conversation_id,
+        )
+    )
+
+    if not deleted:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation not found.",
+        )
+
+    return {
+        "message": (
+            "Conversation deleted successfully."
+        ),
+        "conversation_id": conversation_id,
+    }
+
+
+# --------------------------------
+# Ask question
+# --------------------------------
+
 @app.post(
     "/ask",
     response_model=AnswerResponse,
@@ -440,7 +697,10 @@ def ask_question(
             ),
         )
 
-    # Get the selected document.
+    # --------------------------------
+    # Get selected document
+    # --------------------------------
+
     if request.document_id:
 
         document = (
@@ -476,9 +736,7 @@ def ask_question(
                 ),
             )
 
-        # Current project operates with one document.
         document = documents[0]
-
 
     # --------------------------------
     # Conversation handling
@@ -504,8 +762,6 @@ def ask_question(
                 ),
             )
 
-        # Ensure conversation belongs
-        # to the selected document.
         if (
             conversation.document_id
             != document.id
@@ -549,7 +805,6 @@ def ask_question(
 
         conversation_history = []
 
-
     # --------------------------------
     # Generate RAG answer
     # --------------------------------
@@ -563,32 +818,6 @@ def ask_question(
             conversation_history
         ),
     )
-
-
-    # --------------------------------
-    # Save messages
-    # --------------------------------
-
-    crud.create_message(
-        db=db,
-        conversation_id=(
-            conversation.id
-        ),
-        role="user",
-        content=request.question,
-    )
-
-    crud.create_message(
-        db=db,
-        conversation_id=(
-            conversation.id
-        ),
-        role="assistant",
-        content=(
-            result["answer"]
-        ),
-    )
-
 
     # --------------------------------
     # Format sources
@@ -625,6 +854,48 @@ def ask_question(
         in result["sources"]
     ]
 
+    # --------------------------------
+    # Convert sources to JSON-safe data
+    # --------------------------------
+
+    source_data = [
+        source.model_dump()
+        for source in sources
+    ]
+
+    # --------------------------------
+    # Save user message
+    # --------------------------------
+
+    crud.create_message(
+        db=db,
+        conversation_id=(
+            conversation.id
+        ),
+        role="user",
+        content=request.question,
+    )
+
+    # --------------------------------
+    # Save assistant message
+    # INCLUDING retrieved sources
+    # --------------------------------
+
+    crud.create_message(
+        db=db,
+        conversation_id=(
+            conversation.id
+        ),
+        role="assistant",
+        content=(
+            result["answer"]
+        ),
+        sources=source_data,
+    )
+
+    # --------------------------------
+    # Return answer
+    # --------------------------------
 
     return AnswerResponse(
         conversation_id=(
