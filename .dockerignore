@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Frontend dependencies
+frontend/node_modules/
+frontend/dist/
+dist
+
+# Git
+.git/
+.gitignore
+
+# Environment/secrets
+.env
+
+# Local data
+data/
+datasets/uploads/
+
+# IDE
+.vscode/

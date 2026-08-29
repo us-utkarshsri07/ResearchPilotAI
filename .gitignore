@@ -67,3 +67,7 @@ datasets/raw/
 datasets/uploads
 
 .gitignore
+
+.env.*
+!.env.example
+.env

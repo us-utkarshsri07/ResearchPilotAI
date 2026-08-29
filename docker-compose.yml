@@ -1,0 +1,70 @@
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: researchpilot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: researchpilot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d researchpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: researchpilot-qdrant
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    image: researchpilot-backend:latest
+    container_name: researchpilot-backend
+    restart: unless-stopped
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/researchpilot
+      QDRANT_URL: http://qdrant:6333
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    volumes:
+      - uploads_data:/app/datasets/uploads
+    expose:
+      - "8000"
+
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    container_name: researchpilot-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  uploads_data:
