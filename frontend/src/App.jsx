@@ -3,6 +3,8 @@ import {
   useState,
 } from "react";
 
+import ReactMarkdown from "react-markdown";
+
 import "./App.css";
 
 import {
@@ -965,13 +967,11 @@ function App() {
                   <div className="document-info">
 
                     <h3>
-
                       {uploadResult
                         ?.document_metadata
                         ?.filename ||
                         file?.name ||
                         uploadResult?.filename}
-
                     </h3>
 
                     <p>
@@ -1010,6 +1010,8 @@ function App() {
                       uploadStatus ===
                       "processing"
                     }
+
+                    aria-label="Remove document"
                   >
                     ×
                   </button>
@@ -1031,12 +1033,10 @@ function App() {
                         </span>
 
                         <p>
-
                           {uploadResult
                             ?.document_metadata
                             ?.title ||
                             "Not available"}
-
                         </p>
 
                       </div>
@@ -1049,13 +1049,11 @@ function App() {
                         </span>
 
                         <p>
-
                           {formatAuthors(
                             uploadResult
                               ?.document_metadata
                               ?.author
                           )}
-
                         </p>
 
                       </div>
@@ -1068,13 +1066,11 @@ function App() {
                         </span>
 
                         <p>
-
                           {uploadResult
                             ?.document_metadata
                             ?.page_count ||
                             uploadResult?.pages ||
                             "—"}
-
                         </p>
 
                       </div>
@@ -1087,14 +1083,12 @@ function App() {
                         </span>
 
                         <p>
-
                           {formatFileSize(
                             uploadResult
                               ?.document_metadata
                               ?.file_size ||
                               file?.size
                           )}
-
                         </p>
 
                       </div>
@@ -1104,7 +1098,11 @@ function App() {
 
                     <div className="success-state">
 
-                      ✓ Indexed successfully and
+                      <span className="success-icon">
+                        ✓
+                      </span>
+
+                      Indexed successfully and
                       ready for questions
 
                     </div>
@@ -1155,7 +1153,7 @@ function App() {
 
 
           {/* ========================= */}
-          {/* UNIFIED CONVERSATIONS */}
+          {/* CONVERSATIONS */}
           {/* ========================= */}
 
           {documentReady && (
@@ -1198,6 +1196,7 @@ function App() {
                     onClick={
                       handleNewConversation
                     }
+
                   >
                     + New
                   </button>
@@ -1250,8 +1249,6 @@ function App() {
                               : ""
                           }`}
                         >
-
-                          {/* Conversation header */}
 
                           <div className="conversation-item-header">
 
@@ -1322,8 +1319,6 @@ function App() {
                           </div>
 
 
-                          {/* Thread */}
-
                           {isExpanded &&
                             conversationHistory.length > 0 && (
 
@@ -1374,11 +1369,9 @@ function App() {
                                       </span>
 
                                       <span className="thread-question">
-
                                         {
                                           historyItem.question
                                         }
-
                                       </span>
 
 
@@ -1459,7 +1452,6 @@ function App() {
             >
 
               <textarea
-
                 placeholder={
                   documentReady
                     ? "Ask anything about this document..."
@@ -1482,6 +1474,7 @@ function App() {
                 onKeyDown={
                   handleQuestionKeyDown
                 }
+
               />
 
 
@@ -1507,9 +1500,17 @@ function App() {
                   }
                 >
 
-                  {loading
-                    ? "Researching..."
-                    : "Ask ResearchPilot"}
+                  <span>
+                    {loading
+                      ? "Researching..."
+                      : "Ask ResearchPilot"}
+                  </span>
+
+                  {!loading && (
+                    <span className="ask-button-arrow">
+                      →
+                    </span>
+                  )}
 
                 </button>
 
@@ -1615,6 +1616,10 @@ function App() {
 
             <section className="error-answer">
 
+              <div className="error-answer-icon">
+                !
+              </div>
+
               <h3>
                 Answer unavailable
               </h3>
@@ -1636,15 +1641,25 @@ function App() {
 
                 <section className="answer-card">
 
+                  <div className="answer-question-label">
+                    QUESTION
+                  </div>
+
                   <div className="answer-question">
-
                     “{question}”
+                  </div>
 
+                  <div className="answer-divider" />
+
+                  <div className="answer-label">
+                    ANSWER
                   </div>
 
                   <div className="answer-content">
 
-                    {answer}
+                    <ReactMarkdown>
+                      {answer}
+                    </ReactMarkdown>
 
                   </div>
 
@@ -1737,7 +1752,7 @@ function App() {
                                 </span>
 
 
-                                <span>
+                                <span className="source-document-icon">
                                   ▤
                                 </span>
 
@@ -1809,9 +1824,17 @@ function App() {
                                 }
                               >
 
-                                {isExpanded
-                                  ? "Show less"
-                                  : "View full source"}
+                                <span>
+                                  {isExpanded
+                                    ? "Show less"
+                                    : "View full source"}
+                                </span>
+
+                                <span>
+                                  {isExpanded
+                                    ? "↑"
+                                    : "→"}
+                                </span>
 
                               </button>
 
@@ -1858,6 +1881,12 @@ function App() {
                     : "Upload a PDF to build a searchable research workspace."}
 
                 </p>
+
+                {documentReady && (
+                  <div className="empty-hint">
+                    GROUNDED · TRACEABLE · DOCUMENT-BASED
+                  </div>
+                )}
 
               </section>
 
