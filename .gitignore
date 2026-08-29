@@ -68,6 +68,7 @@ datasets/uploads
 
 .gitignore
 
+docker-config.txt
 .env.*
 !.env.example
 .env
