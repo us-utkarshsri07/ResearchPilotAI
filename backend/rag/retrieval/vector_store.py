@@ -16,6 +16,7 @@ from backend.rag.ingestion.schemas import Chunk
 from backend.core.config import (
     QDRANT_PATH,
     QDRANT_URL,
+    QDRANT_API_KEY,
 )
 
 
@@ -37,7 +38,8 @@ def get_qdrant_client() -> QdrantClient:
                 if QDRANT_URL:
 
                     _client = QdrantClient(
-                        url=QDRANT_URL
+                        url=QDRANT_URL,
+                        api_key=QDRANT_API_KEY,
                     )
 
                 else:

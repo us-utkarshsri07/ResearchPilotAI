@@ -12,6 +12,7 @@ RAW_DATA_DIR = DATASET_DIR / "raw"
 QDRANT_PATH = BASE_DIR / "data" / "qdrant"
 
 QDRANT_URL = os.getenv("QDRANT_URL")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
 
 # PostgreSQL configuration
