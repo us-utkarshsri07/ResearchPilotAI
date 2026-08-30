@@ -155,56 +155,33 @@ The primary goal is to make research-paper interaction more efficient while keep
 
 ## Demo Workflow
 
-<!-- Replace with your architecture image -->
+<!-- Replace with your Demo  Workflow image -->
 
 <p align="center">
   <img src="Demo Workflow.png" alt="ResearchPilot AI System Architecture" width="100%">
 </p>
 
-<!-- Optional SVG version -->
-<!--
-<p align="center">
-  <img src="System Architecture.png" alt="ResearchPilot AI Architecture" width="100%">
-</p>
--->
-
 ---
 
-## Tech Stack
+# Technology Stack
 
-### Frontend
-
-- React
-- Vite
-- JavaScript
-- Fetch API
-
-### Backend
-
-- Python
-- FastAPI
-- Uvicorn
-- SQLAlchemy
-
-### AI / ML
-
-- Google Gemini
-- Sentence Transformers
-- MiniLM
-- Cross-Encoder
-
-### Databases
-
-- PostgreSQL
-- Qdrant
-
-### Infrastructure
-
-- Docker
-- Docker Compose
-- Railway
-- Vercel
-- Qdrant Cloud
+| Layer | Technology |
+|---|---|
+| Frontend | React |
+| Build Tool | Vite |
+| Backend | FastAPI |
+| API Server | Uvicorn |
+| Programming Language | Python 3.11+ |
+| Relational Database | PostgreSQL |
+| Vector Database | Qdrant |
+| Embedding Framework | Sentence Transformers |
+| Embedding Model | all-MiniLM-L6-v2 |
+| Reranker | ms-marco-MiniLM-L-6-v2 |
+| LLM | Gemini |
+| Containerization | Docker |
+| Local Orchestration | Docker Compose |
+| Backend Deployment | Railway |
+| Frontend Deployment | Vercel |
 
 ---
 
