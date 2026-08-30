@@ -42,3 +42,123 @@ The system combines:
 The primary goal is to make research-paper interaction more efficient while keeping generated answers grounded in the uploaded source material.
 
 ---
+
+### Silent / Less-Obvious Features
+
+- Globally unique chunk IDs prevent collisions between documents
+- Document-level retrieval isolation
+- Chunk metadata preserved inside Qdrant
+- Source, page number, filename, chunk ID, and document ID retained
+- Conversation context is used for follow-up questions
+- Conversation history is not treated as a factual source
+- Answers are restricted to retrieved research context
+- Citation numbers are generated only from available sources
+- Configurable retrieval and relevance thresholds
+- Cross-encoder reranker support
+- Local Qdrant fallback for development
+- Qdrant Cloud support for production
+- PostgreSQL persistence for documents and conversations
+- Separate vector and relational storage
+- Dockerized local development environment
+- Production deployment using Railway + Vercel
+
+---
+
+## System Architecture
+
+<!-- Replace with your architecture image -->
+
+<p align="center">
+  <img src="YOUR_ARCHITECTURE_IMAGE_URL" alt="ResearchPilot AI System Architecture" width="100%">
+</p>
+
+<!-- Optional SVG version -->
+<!--
+<p align="center">
+  <img src="System Architecture.png" alt="ResearchPilot AI Architecture" width="100%">
+</p>
+-->
+
+---
+
+## Project Structure
+
+| **Folder / File** | **Purpose** |
+|---|---|
+| `backend/` | FastAPI backend and RAG pipeline |
+| `backend/api/` | API routes and application lifecycle |
+| `backend/core/` | Configuration and environment settings |
+| `backend/rag/` | Retrieval-Augmented Generation pipeline |
+| `backend/rag/ingestion/` | PDF processing, chunking, and ingestion |
+| `backend/rag/retrieval/` | Vector search and retrieval logic |
+| `backend/rag/pipeline.py` | Main RAG orchestration |
+| `backend/rag/retrieval/vector_store.py` | Qdrant vector storage and search |
+| `frontend/` | React + Vite frontend |
+| `frontend/src/` | Frontend application source |
+| `datasets/` | Dataset and document-related files |
+| `data/` | Local persistent application data |
+| `docker-compose.yml` | Local multi-container environment |
+| `.env` | Local environment configuration |
+| `README.md` | Project documentation |
+
+---
+
+## Internal Flow Mapping
+
+| **Component** | **Responsibility** |
+|---|---|
+| PDF Ingestion | Extract and process uploaded documents |
+| Chunking | Split document text into searchable chunks |
+| Embeddings | Convert chunks into 384-dimensional vectors |
+| Vector Store | Store and retrieve embeddings using Qdrant |
+| Retrieval | Find relevant document chunks |
+| Reranking | Improve relevance ordering |
+| Context Construction | Build grounded context for the LLM |
+| LLM Generation | Generate the final answer using Gemini |
+| Source Tracking | Return page and chunk information |
+| Conversations | Persist research conversations |
+| API Layer | Expose backend functionality |
+| Frontend | Upload, ask, retrieve and display results |
+
+---
+
+## Execution Flow
+
+```text
+User
+  ↓
+React + Vite Frontend
+  ↓
+FastAPI Backend
+  ↓
+PDF Processing
+  ↓
+Text Extraction
+  ↓
+Chunking
+  ↓
+MiniLM Embeddings
+  ↓
+Qdrant Vector Database
+  ↓
+User Question
+  ↓
+Query Processing
+  ↓
+Query Embedding
+  ↓
+Document-Scoped Vector Search
+  ↓
+Relevant Chunks
+  ↓
+Reranking / Retrieval Selection
+  ↓
+Context Construction
+  ↓
+Gemini
+  ↓
+Answer + Sources
+  ↓
+Conversation Persistence
+  ↓
+Frontend Display
