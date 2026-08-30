@@ -43,6 +43,12 @@ The primary goal is to make research-paper interaction more efficient while keep
 
 ---
 
+> [!IMPORTANT]
+> **Document-scoped RAG with hybrid retrieval:** ResearchPilot generates `384`-dimensional embeddings for document chunks, performs semantic similarity search in Qdrant with `document_id` metadata filtering, reranks the retrieved chunks using a Cross-Encoder, and passes only the highest-relevance context to Gemini 3.6 Flash for grounded answer generation with page-level source attribution.
+> 
+
+---
+
 ### Silent / Less-Obvious Features
 
 - Globally unique chunk IDs prevent collisions between documents
