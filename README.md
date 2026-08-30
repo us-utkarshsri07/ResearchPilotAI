@@ -153,6 +153,23 @@ The primary goal is to make research-paper interaction more efficient while keep
 
 ---
 
+## Demo Workflow
+
+<!-- Replace with your architecture image -->
+
+<p align="center">
+  <img src="Demo Workflow.png" alt="ResearchPilot AI System Architecture" width="100%">
+</p>
+
+<!-- Optional SVG version -->
+<!--
+<p align="center">
+  <img src="System Architecture.png" alt="ResearchPilot AI Architecture" width="100%">
+</p>
+-->
+
+---
+
 ## Tech Stack
 
 ### Frontend
