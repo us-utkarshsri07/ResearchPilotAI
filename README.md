@@ -176,3 +176,29 @@ Frontend Display
 | Minimum Relevance Score     | Filters low-quality retrieval results     |
 | Vector Distance             | `Cosine`                                  |
 | Collection                  | `researchpilot_chunks`                    |
+
+
+## Key Design Decisions
+
+### Why RAG?
+
+Research papers can contain large amounts of information. RAG retrieves relevant document sections before generating an answer, allowing the LLM to work with targeted research context.
+
+### Why Qdrant?
+
+Qdrant provides vector similarity search together with metadata filtering. This allows ResearchPilot to retrieve semantically relevant chunks while restricting results to a specific document.
+
+### Why PostgreSQL + Qdrant?
+
+Each database has a separate responsibility:
+
+```text
+PostgreSQL
+    ↓
+Structured Application Data
+
+Qdrant
+    ↓
+Semantic Vector Search
+
+```
