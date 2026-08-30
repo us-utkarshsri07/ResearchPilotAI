@@ -81,6 +81,37 @@ The primary goal is to make research-paper interaction more efficient while keep
 
 ---
 
+## Production Architecture
+
+```text
+                         Users
+                           |
+                           ↓
+                  ┌─────────────────┐
+                  │     Vercel      │
+                  │ React + Vite    │
+                  └────────┬────────┘
+                           |
+                       REST API
+                           |
+                           ↓
+                  ┌─────────────────┐
+                  │     Railway     │
+                  │ FastAPI Backend │
+                  └────────┬────────┘
+                           |
+             ┌─────────────┼─────────────┐
+             ↓             ↓             ↓
+      ┌────────────┐ ┌────────────┐ ┌────────────┐
+      │ PostgreSQL │ │   Qdrant   │ │  Gemini    │
+      │            │ │            │ │    API     │
+      │ Documents  │ │ Embeddings │ │    LLM     │
+      │ Messages   │ │ Chunks     │ │ Generation │
+      │ Chats      │ │ Metadata   │ │            │
+      └────────────┘ └────────────┘ └────────────┘
+
+```
+
 ## Project Structure
 
 | **Folder / File** | **Purpose** |
@@ -119,6 +150,44 @@ The primary goal is to make research-paper interaction more efficient while keep
 | Conversations | Persist research conversations |
 | API Layer | Expose backend functionality |
 | Frontend | Upload, ask, retrieve and display results |
+
+---
+
+## Tech Stack
+
+### Frontend
+
+- React
+- Vite
+- JavaScript
+- Fetch API
+
+### Backend
+
+- Python
+- FastAPI
+- Uvicorn
+- SQLAlchemy
+
+### AI / ML
+
+- Google Gemini
+- Sentence Transformers
+- MiniLM
+- Cross-Encoder
+
+### Databases
+
+- PostgreSQL
+- Qdrant
+
+### Infrastructure
+
+- Docker
+- Docker Compose
+- Railway
+- Vercel
+- Qdrant Cloud
 
 ---
 
@@ -230,6 +299,7 @@ Conversation history enables natural follow-up questions while keeping factual a
 - Production deployment architecture
 
 ---
+
 
 ## Limitations
 
