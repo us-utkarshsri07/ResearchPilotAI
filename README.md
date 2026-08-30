@@ -274,6 +274,135 @@ Conversation history enables natural follow-up questions while keeping factual a
 
 ---
 
+# API
+
+The backend is implemented using FastAPI.
+
+## Health Check
+
+```http
+GET /health
+```
+
+Returns application health information.
+
+Example:
+
+```json
+{
+  "status": "healthy",
+  "service": "researchpilot",
+  "documents": 1
+}
+```
+
+---
+
+## Upload PDF
+
+```http
+POST /upload
+```
+
+Uploads and processes a PDF document.
+
+Request:
+
+```text
+multipart/form-data
+file=<PDF>
+```
+
+The backend:
+
+1. Receives the PDF.
+2. Extracts document content.
+3. Splits the content into chunks.
+4. Generates embeddings.
+5. Stores vectors in Qdrant.
+6. Stores document metadata.
+
+---
+
+## Get Documents
+
+```http
+GET /documents
+```
+
+Returns uploaded documents.
+
+---
+
+## Get Document Conversations
+
+```http
+GET /documents/{document_id}/conversations
+```
+
+Returns conversations associated with a document.
+
+---
+
+## Create Conversation
+
+```http
+POST /documents/{document_id}/conversations
+```
+
+Creates a new conversation for a document.
+
+---
+
+## Get Conversation
+
+```http
+GET /conversations/{conversation_id}
+```
+
+Returns conversation history.
+
+---
+
+## Delete Conversation
+
+```http
+DELETE /conversations/{conversation_id}
+```
+
+Deletes a conversation.
+
+---
+
+## Ask Question
+
+```http
+POST /ask
+```
+
+Example request:
+
+```json
+{
+  "question": "What is self-attention?",
+  "document_id": "044b8388-7d4d-41ca-bdca-e385f7007b75"
+}
+```
+
+A conversation can optionally be included:
+
+```json
+{
+  "question": "How is it different from multi-head attention?",
+  "document_id": "044b8388-7d4d-41ca-bdca-e385f7007b75",
+  "conversation_id": 1
+}
+```
+
+The response contains the generated answer and retrieved sources.
+
+---
+
 ## Important Project Characteristics
 
 - Document-scoped RAG
