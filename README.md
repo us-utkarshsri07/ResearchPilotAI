@@ -198,7 +198,127 @@ PostgreSQL
 Structured Application Data
 
 Qdrant
+
+```
+
+### Why Page-Level Metadata?
+
+Page and chunk metadata allow retrieved information to be traced back to the original research document.
+
+### Why Conversation Context?
+
+Conversation history enables natural follow-up questions while keeping factual answers grounded in retrieved research context.
+
+---
+
+## Important Project Characteristics
+
+- Document-scoped RAG
+- Source-aware answer generation
+- Page-level traceability
+- Semantic vector retrieval
+- Configurable retrieval pipeline
+- Reranking support
+- Persistent conversations
+- Globally unique chunk IDs
+- Metadata-aware chunks
+- Local Qdrant support
+- Qdrant Cloud support
+- PostgreSQL persistence
+- Dockerized development
+- Separate frontend and backend
+- Production deployment architecture
+
+---
+
+## Limitations
+
+- Answer quality depends on PDF extraction quality.
+- Poorly structured PDFs may reduce retrieval accuracy.
+- Embedding generation can be computationally expensive during local development.
+- Answer quality depends on the relevance of retrieved context.
+- External AI and cloud services require valid production credentials.
+- The system is primarily designed for research documents rather than arbitrary web content.
+
+---
+
+## Future Improvements
+
+- Streaming LLM responses
+- User authentication
+- Multi-user workspaces
+- Multi-document research sessions
+- Advanced hybrid retrieval
+- Improved reranking
+- Research paper comparison
+- Automatic document summarization
+- Citation highlighting
+- Exact source/page preview
+- Background document processing
+- Async ingestion
+- Retrieval evaluation benchmarks
+- Answer quality evaluation
+- Document-level analytics
+
+---
+
+## Project Status
+
+**Version:** `v1.0.0`
+
+ResearchPilot AI currently supports the complete research workflow:
+
+```text
+PDF Upload
+    ↓
+Document Processing
+    ↓
+Chunking
+    ↓
+Embedding Generation
+    ↓
+Vector Indexing
+    ↓
+Document-Scoped Retrieval
+    ↓
+Reranking
+    ↓
+RAG Answer Generation
+    ↓
+Source Attribution
+    ↓
+Conversation Persistence
     ↓
 Semantic Vector Search
 
 ```
+
+## Version History
+
+### v1.0.0
+
+- Initial production release
+- PDF document ingestion
+- Semantic embeddings
+- Qdrant vector search
+- Document-level retrieval filtering
+- RAG-based question answering
+- Gemini integration
+- Conversation management
+- Page-level source tracking
+- Retrieval score display
+- Production deployment support
+
+---
+
+## License
+
+MIT LICENSE
+
+---
+
+## Author
+
+**Utkarsh**
+
+ResearchPilot AI is an AI-powered research assistant focused on grounded answers, semantic retrieval, source traceability, and document-aware conversations.
