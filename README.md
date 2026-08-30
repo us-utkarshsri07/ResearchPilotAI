@@ -69,7 +69,7 @@ The primary goal is to make research-paper interaction more efficient while keep
 <!-- Replace with your architecture image -->
 
 <p align="center">
-  <img src="YOUR_ARCHITECTURE_IMAGE_URL" alt="ResearchPilot AI System Architecture" width="100%">
+  <img src="System Architecture.png" alt="ResearchPilot AI System Architecture" width="100%">
 </p>
 
 <!-- Optional SVG version -->
