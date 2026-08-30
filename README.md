@@ -162,3 +162,17 @@ Answer + Sources
 Conversation Persistence
   ↓
 Frontend Display
+
+```
+## RAG Configuration
+
+| **Configuration**           | **Value / Purpose**                       |
+|-----------------------------|-------------------------------------------|
+| Chunk Size                  | Controls the amount of text in each chunk |
+| Chunk Overlap               | Preserves context between adjacent chunks |
+| Embedding Dimensions        | `384`                                     |
+| Retrieval Top-K             | Number of chunks initially retrieved      |
+| Final Top-K                 | Number of chunks passed to generation     |
+| Minimum Relevance Score     | Filters low-quality retrieval results     |
+| Vector Distance             | `Cosine`                                  |
+| Collection                  | `researchpilot_chunks`                    |
