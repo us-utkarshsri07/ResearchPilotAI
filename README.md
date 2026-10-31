@@ -1,4 +1,7 @@
 # ResearchPilot AI
+<p align="center">
+  <img src="logo.png" alt="ResearchPilot AI System Architecture" width="100%">
+</p>
 
 > An AI-powered research assistant for asking questions about research papers using Retrieval-Augmented Generation (RAG), semantic search, and source-aware answers.
 
